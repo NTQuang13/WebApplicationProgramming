@@ -89,6 +89,15 @@ function parseSalaryQueryParam(value) {
   return n;
 }
 
+const findRecruiterCompany = async (companyId, recruiterId) => {
+  const [companies] = await pool.query(
+    "SELECT id FROM companies WHERE id = ? AND recruiterId = ?",
+    [companyId, recruiterId],
+  );
+
+  return companies[0] || null;
+};
+
 // 1. TẠO JOB MỚI
 export const createJob = async (req, res) => {
   try {
@@ -110,6 +119,13 @@ export const createJob = async (req, res) => {
     if (!title || !description || !companyId) {
       return res.status(400).json({
         message: "Thiếu thông tin bắt buộc (title, description, companyId)",
+      });
+    }
+
+    const ownedCompany = await findRecruiterCompany(companyId, createdBy);
+    if (!ownedCompany) {
+      return res.status(403).json({
+        message: "Ban chi duoc dang job cho company do minh tao",
       });
     }
 
@@ -367,6 +383,7 @@ export const updateJob = async (req, res) => {
       location,
       jobTypeId,
       experienceLevelId,
+      companyId,
     } = req.body;
 
     // Validate salary
@@ -421,6 +438,18 @@ export const updateJob = async (req, res) => {
     if (experienceLevelId !== undefined) {
       updates.push("experienceLevelId = ?");
       values.push(experienceLevelId);
+    }
+
+    if (companyId !== undefined) {
+      const ownedCompany = await findRecruiterCompany(companyId, userId);
+      if (!ownedCompany) {
+        return res.status(403).json({
+          message: "Ban chi duoc gan job vao company do minh tao",
+        });
+      }
+
+      updates.push("companyId = ?");
+      values.push(companyId);
     }
 
     if (updates.length === 0) {

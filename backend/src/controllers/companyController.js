@@ -52,6 +52,28 @@ export const getCompanies = async (req, res) => {
   }
 };
 
+export const getMyCompanies = async (req, res) => {
+  try {
+    const recruiterId = req.user?.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const sql = `
+      SELECT * FROM companies
+      WHERE recruiterId = ?
+      ORDER BY createdAt DESC
+      LIMIT ? OFFSET ?
+    `;
+    const [companies] = await pool.query(sql, [recruiterId, limit, offset]);
+
+    res.status(200).json({ companies });
+  } catch (error) {
+    console.error("Loi lay danh sach cong ty cua recruiter:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const getCompanyById = async (req, res) => {
   try {
     const companyId = req.params.id;

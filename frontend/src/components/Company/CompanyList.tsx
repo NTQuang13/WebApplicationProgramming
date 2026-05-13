@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Building2, ExternalLink, Plus, ArrowRight } from 'lucide-react'
+import { Building2, ExternalLink, ArrowRight, Plus } from 'lucide-react'
 import EmptyState from '@/components/Common/EmptyState'
 import { useAuthStore } from '@/store/authStore'
 import type { Company } from '@/types'
@@ -9,7 +9,7 @@ interface CompanyListProps {
 }
 
 function CompanyList({ companies }: CompanyListProps) {
-  const { user } = useAuthStore()
+  const user = useAuthStore((state) => state.user)
   const isRecruiter = user?.role === 'recruiter'
 
   if (companies.length === 0) {
@@ -50,13 +50,6 @@ function CompanyList({ companies }: CompanyListProps) {
               <span className="text-sm text-slate-400">No website provided</span>
             )}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-              <Link
-                to={`/companies/${company.id}`}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-              >
-                View jobs
-                <ArrowRight className="h-4 w-4" />
-              </Link>
               {isRecruiter ? (
                 <Link
                   to="/jobs/new"
@@ -65,7 +58,15 @@ function CompanyList({ companies }: CompanyListProps) {
                   <Plus className="h-4 w-4" />
                   Post Job
                 </Link>
-              ) : null}
+              ) : (
+                <Link
+                  to={`/companies/${company.id}`}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  View jobs
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
             </div>
           </div>
         </article>

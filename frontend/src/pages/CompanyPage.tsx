@@ -27,7 +27,11 @@ function CompanyPage() {
       try {
         setIsLoading(true)
         setError(null)
-        const response = normalizeCompanies(await companyService.getCompanies(1, LIMIT))
+        const response = normalizeCompanies(
+          await (isRecruiter
+            ? companyService.getMyCompanies(1, LIMIT)
+            : companyService.getCompanies(1, LIMIT)),
+        )
 
         if (isMounted) {
           setCompanies(response)
@@ -49,7 +53,7 @@ function CompanyPage() {
     return () => {
       isMounted = false
     }
-  }, [refreshKey])
+  }, [isRecruiter, refreshKey])
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -60,7 +64,7 @@ function CompanyPage() {
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
           {isRecruiter
-            ? 'Create company profiles and use them when posting jobs.'
+            ? 'Only the companies you created are shown here, and you can only post jobs for those companies.'
             : 'Browse companies and learn more about their openings.'}
         </p>
       </div>

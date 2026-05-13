@@ -15,6 +15,12 @@ export const companyService = {
     })
     return response.companies
   },
+  getMyCompanies: async (page = 1, limit = 20) => {
+    const response = await api.get<{ companies: Company[] }>('/api/companies/mine', {
+      params: { page, limit },
+    })
+    return response.companies
+  },
   getCompanyById: async (id: string) => {
     const response = await api.get<{ company: Company }>(`/api/companies/${id}`)
     return response.company

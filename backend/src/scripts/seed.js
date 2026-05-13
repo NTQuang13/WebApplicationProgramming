@@ -142,16 +142,18 @@ const seedDatabase = async () => {
     const companies = [];
     for (let i = 0; i < NUM_COMPANIES; i++) {
       const id = uuidv4();
+      const recruiterId = faker.helpers.arrayElement(recruiters);
       await pool.query(
-        "INSERT INTO companies (id, name, description, website) VALUES (?, ?, ?, ?)",
+        "INSERT INTO companies (id, recruiterId, name, description, website) VALUES (?, ?, ?, ?, ?)",
         [
           id,
+          recruiterId,
           faker.company.name(),
           faker.company.catchPhrase(),
           faker.internet.url(),
         ],
       );
-      companies.push(id);
+      companies.push({ id, recruiterId });
     }
 
     // 3.1 TẠO DANH MỤC CÔNG VIỆC
@@ -276,8 +278,9 @@ const seedDatabase = async () => {
 
     for (let i = 0; i < NUM_JOBS; i++) {
       const id = uuidv4();
-      const companyId = faker.helpers.arrayElement(companies);
-      const createdBy = faker.helpers.arrayElement(recruiters);
+      const company = faker.helpers.arrayElement(companies);
+      const companyId = company.id;
+      const createdBy = company.recruiterId;
       const categoryId = faker.helpers.arrayElement(categories);
       const expLevelId = faker.helpers.arrayElement(experienceLevelIds);
       const salaryMin = faker.number.int({ min: 500, max: 1500 });

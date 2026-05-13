@@ -72,11 +72,24 @@ function JobForm({ initialJob }: JobFormProps) {
       try {
         setIsLoadingCompanies(true);
         const response = normalizeCompanies(
-          await companyService.getCompanies(1, 100),
+          await companyService.getMyCompanies(1, 100),
         );
 
         if (isMounted) {
           setCompanies(response);
+          setForm((current) => {
+            if (
+              current.companyId &&
+              response.some((company) => company.id === current.companyId)
+            ) {
+              return current;
+            }
+
+            return {
+              ...current,
+              companyId: response[0]?.id ?? "",
+            };
+          });
         }
       } catch {
         toast.error("Failed to load companies.");
@@ -133,6 +146,11 @@ function JobForm({ initialJob }: JobFormProps) {
   };
 
   const validate = () => {
+    if (companies.length === 0) {
+      toast.error("Please create your company before posting a job.");
+      return false;
+    }
+
     if (
       !form.title.trim() ||
       !form.location.trim() ||
@@ -334,7 +352,11 @@ function JobForm({ initialJob }: JobFormProps) {
             className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100 disabled:bg-slate-100"
           >
             <option value="">
-              {isLoadingCompanies ? "Loading companies..." : "Select company"}
+              {isLoadingCompanies
+                ? "Loading companies..."
+                : companies.length === 0
+                  ? "No company available"
+                  : "Select company"}
             </option>
             {companies.map((company) => (
               <option key={company.id} value={company.id}>
@@ -342,6 +364,11 @@ function JobForm({ initialJob }: JobFormProps) {
               </option>
             ))}
           </select>
+          {!isLoadingCompanies && companies.length === 0 ? (
+            <p className="mt-2 text-sm text-amber-700">
+              You need to create a company first before posting a job.
+            </p>
+          ) : null}
         </div>
         <div className="md:col-span-2">
           <label
@@ -381,7 +408,7 @@ function JobForm({ initialJob }: JobFormProps) {
       <div className="mt-6 flex justify-end">
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || companies.length === 0}
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
