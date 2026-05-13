@@ -49,22 +49,24 @@ function CompanyList({ companies }: CompanyListProps) {
             ) : (
               <span className="text-sm text-slate-400">No website provided</span>
             )}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-              {isRecruiter ? (
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              {/* Nút View Jobs - Hiển thị cho tất cả mọi người */}
+              <Link
+                to={`/companies/${company.id}`}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                View jobs
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+
+              {/* Nút Post Job - Chỉ hiển thị cho Recruiter */}
+              {isRecruiter && (
                 <Link
                   to="/jobs/new"
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700"
                 >
                   <Plus className="h-4 w-4" />
                   Post Job
-                </Link>
-              ) : (
-                <Link
-                  to={`/companies/${company.id}`}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                >
-                  View jobs
-                  <ArrowRight className="h-4 w-4" />
                 </Link>
               )}
             </div>
