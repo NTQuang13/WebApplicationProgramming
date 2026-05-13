@@ -1,0 +1,40 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "worker": "node src/workers/cvWorker.js",
+    "db:init": "node src/libs/init-db.js",
+    "db:seed": "node src/scripts/seed.js",
+    "db:sync-es": "node src/scripts/sync-es.js",
+    "cvs:enqueue-pending": "node src/scripts/enqueue-pending-cvs.js",
+    "deploy:prepare": "npm run db:init && npm run cvs:enqueue-pending && npm run db:sync-es",
+    "demo:reset": "npm run db:init && npm run db:seed"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@elastic/elasticsearch": "^9.4.0",
+    "@faker-js/faker": "^10.4.0",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^5.76.6",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
+    "mysql2": "^3.20.0",
+    "pdf2json": "^4.0.3",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

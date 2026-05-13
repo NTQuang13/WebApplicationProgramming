@@ -1,0 +1,1170 @@
+openapi: 3.0.3
+info:
+  title: Smart Job Portal API
+  version: 1.0.0
+  description: |
+    Tài liệu API cho dự án Smart Job Portal with Document Search.
+
+    Cách test nhanh:
+    1. Khởi động backend tại `http://localhost:3000`.
+    2. Import file `backend/swagger.yaml` vào Swagger Editor hoặc Postman.
+    3. Gọi `POST /api/auth/signin` để lấy `accessToken`.
+    4. Với các API protected, bấm `Authorize` và nhập `Bearer <accessToken>`.
+    5. API `POST /api/auth/refresh` dùng `refreshToken` trong cookie do server trả về sau khi đăng nhập.
+
+    Ghi chú:
+    - Candidate và Recruiter có quyền truy cập khác nhau trên một số endpoint.
+    - CV search sử dụng Elasticsearch.
+    - Upload CV sẽ đưa file vào queue để worker xử lý text nền.
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+tags:
+  - name: Auth
+  - name: Users
+  - name: Companies
+  - name: Jobs
+  - name: CVs
+  - name: Applications
+  - name: Bookmarks
+  - name: Taxonomies
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Internal server error
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 5bb5fb8f-4b63-4718-b3dc-2b0639c1e570
+        name:
+          type: string
+          example: Nguyen Van A
+        email:
+          type: string
+          format: email
+          example: candidate@example.com
+        phone:
+          type: string
+          nullable: true
+          example: "0901234567"
+        role:
+          type: string
+          enum: [candidate, recruiter]
+          example: candidate
+        createdAt:
+          type: string
+          format: date-time
+    Company:
+      type: object
+      properties:
+        id:
+          type: string
+        recruiterId:
+          type: string
+          nullable: true
+        name:
+          type: string
+        description:
+          type: string
+        website:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        requirements:
+          type: string
+          nullable: true
+        salaryMin:
+          type: number
+          nullable: true
+        salaryMax:
+          type: number
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        jobTypeId:
+          type: string
+          nullable: true
+        jobTypeName:
+          type: string
+          nullable: true
+        experienceLevelId:
+          type: string
+          nullable: true
+        experienceLevelName:
+          type: string
+          nullable: true
+        companyId:
+          type: string
+        companyName:
+          type: string
+          nullable: true
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    CV:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        fileName:
+          type: string
+        filePath:
+          type: string
+        fileSize:
+          type: integer
+        status:
+          type: string
+          example: pending
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CVSearchHit:
+      type: object
+      properties:
+        cvId:
+          type: string
+        userId:
+          type: string
+        fileName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        score:
+          type: number
+          nullable: true
+        highlights:
+          type: array
+          items:
+            type: string
+    Application:
+      type: object
+      properties:
+        id:
+          type: string
+        jobId:
+          type: string
+        userId:
+          type: string
+        cvId:
+          type: string
+        status:
+          type: string
+          enum: [pending, reviewed, accepted, rejected]
+        appliedAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+    Bookmark:
+      type: object
+      properties:
+        bookmarkId:
+          type: string
+        savedAt:
+          type: string
+          format: date-time
+        jobId:
+          type: string
+        title:
+          type: string
+        salaryMin:
+          type: number
+          nullable: true
+        salaryMax:
+          type: number
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        companyName:
+          type: string
+        website:
+          type: string
+          nullable: true
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    ExperienceLevel:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        order:
+          type: integer
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 23
+    SignupRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          example: Nguyen Van A
+        email:
+          type: string
+          format: email
+          example: candidate@example.com
+        password:
+          type: string
+          format: password
+          example: "123456"
+        role:
+          type: string
+          enum: [candidate, recruiter]
+          default: candidate
+    SigninRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: recruiter@example.com
+        password:
+          type: string
+          format: password
+          example: "123456"
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Nguyen Van B
+        phone:
+          type: string
+          example: "0988888888"
+    ChangePasswordRequest:
+      type: object
+      required: [oldPassword, newPassword, confirmPassword]
+      properties:
+        oldPassword:
+          type: string
+        newPassword:
+          type: string
+        confirmPassword:
+          type: string
+    CreateCompanyRequest:
+      type: object
+      required: [name, description]
+      properties:
+        name:
+          type: string
+          example: OpenAI Vietnam
+        description:
+          type: string
+          example: AI product company
+        website:
+          type: string
+          example: https://openai.com
+    CreateJobRequest:
+      type: object
+      required: [title, description, companyId]
+      properties:
+        title:
+          type: string
+          example: Backend Developer
+        description:
+          type: string
+          example: Build and maintain APIs.
+        requirements:
+          type: string
+          example: Node.js, MySQL, Elasticsearch
+        salaryMin:
+          type: number
+          example: 1000
+        salaryMax:
+          type: number
+          example: 2000
+        location:
+          type: string
+          example: Ho Chi Minh City
+        jobTypeId:
+          type: string
+          example: full-time-id
+        experienceLevelId:
+          type: string
+          example: junior-id
+        companyId:
+          type: string
+          example: company-uuid
+    UpdateJobRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        requirements:
+          type: string
+        salaryMin:
+          type: number
+        salaryMax:
+          type: number
+        location:
+          type: string
+        jobTypeId:
+          type: string
+        experienceLevelId:
+          type: string
+    ApplyJobRequest:
+      type: object
+      required: [jobId, cvId]
+      properties:
+        jobId:
+          type: string
+        cvId:
+          type: string
+    UpdateApplicationStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pending, reviewed, accepted, rejected]
+    SaveBookmarkRequest:
+      type: object
+      required: [jobId]
+      properties:
+        jobId:
+          type: string
+paths:
+  /api/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Đăng ký tài khoản
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: Đăng ký thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+                  token:
+                    type: string
+        "400":
+          description: Thiếu dữ liệu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "409":
+          description: Email đã tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /api/auth/signin:
+    post:
+      tags: [Auth]
+      summary: Đăng nhập
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SigninRequest"
+      responses:
+        "200":
+          description: Đăng nhập thành công
+          headers:
+            Set-Cookie:
+              description: Cookie `refreshToken` được trả về để gọi API refresh
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User Recruiter A đã logged in!
+                  accessToken:
+                    type: string
+        "400":
+          description: Thiếu email hoặc password
+        "401":
+          description: Sai thông tin đăng nhập
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Lấy access token mới bằng refresh token cookie
+      security: []
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+        "401":
+          description: Không có refresh token
+        "403":
+          description: Refresh token không hợp lệ hoặc hết hạn
+  /api/auth/signout:
+    post:
+      tags: [Auth]
+      summary: Đăng xuất
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Đăng xuất thành công
+  /api/users/me:
+    get:
+      tags: [Users]
+      summary: Lấy thông tin user hiện tại
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    put:
+      tags: [Users]
+      summary: Cập nhật thông tin cá nhân
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/User"
+        "400":
+          description: Không có dữ liệu để cập nhật
+  /api/users/password:
+    put:
+      tags: [Users]
+      summary: Đổi mật khẩu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Đổi mật khẩu thành công
+        "400":
+          description: Dữ liệu không hợp lệ
+        "404":
+          description: Không tìm thấy user
+  /api/users/{id}:
+    get:
+      tags: [Users]
+      summary: Lấy user theo ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+        "404":
+          description: Không tìm thấy user
+  /api/companies:
+    get:
+      tags: [Companies]
+      summary: Lấy danh sách công ty
+      security: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  companies:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Company"
+    post:
+      tags: [Companies]
+      summary: Tạo công ty mới (Recruiter)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompanyRequest"
+      responses:
+        "201":
+          description: Tạo thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  company:
+                    $ref: "#/components/schemas/Company"
+        "400":
+          description: Dữ liệu không hợp lệ
+        "403":
+          description: Không đúng quyền
+  /api/companies/{id}:
+    get:
+      tags: [Companies]
+      summary: Lấy chi tiết công ty
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  company:
+                    $ref: "#/components/schemas/Company"
+        "404":
+          description: Không tìm thấy công ty
+  /api/jobs:
+    get:
+      tags: [Jobs]
+      summary: Lấy danh sách việc làm, hỗ trợ filter/search
+      security: []
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Từ khóa tìm kiếm job
+        - in: query
+          name: location
+          schema:
+            type: string
+        - in: query
+          name: companyId
+          schema:
+            type: string
+        - in: query
+          name: createdBy
+          schema:
+            type: string
+        - in: query
+          name: jobTypeId
+          schema:
+            type: string
+        - in: query
+          name: experienceLevelId
+          schema:
+            type: string
+        - in: query
+          name: salaryMin
+          schema:
+            type: number
+        - in: query
+          name: salaryMax
+          schema:
+            type: number
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Job"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  latencyMs:
+                    type: integer
+    post:
+      tags: [Jobs]
+      summary: Tạo việc làm mới (Recruiter)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJobRequest"
+      responses:
+        "201":
+          description: Tạo thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  jobId:
+                    type: string
+        "400":
+          description: Dữ liệu không hợp lệ
+        "403":
+          description: Không đúng quyền
+  /api/jobs/{id}:
+    get:
+      tags: [Jobs]
+      summary: Lấy chi tiết việc làm
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job:
+                    $ref: "#/components/schemas/Job"
+        "404":
+          description: Không tìm thấy việc làm
+    put:
+      tags: [Jobs]
+      summary: Cập nhật việc làm (Recruiter sở hữu job)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateJobRequest"
+      responses:
+        "200":
+          description: Cập nhật thành công
+        "400":
+          description: Dữ liệu không hợp lệ
+        "403":
+          description: Không có quyền sửa job này
+        "404":
+          description: Không tìm thấy việc làm
+    delete:
+      tags: [Jobs]
+      summary: Xóa việc làm (Recruiter sở hữu job)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Xóa thành công
+        "403":
+          description: Không có quyền xóa
+        "404":
+          description: Không tìm thấy việc làm
+  /api/cvs/upload:
+    post:
+      tags: [CVs]
+      summary: Upload CV (Candidate hoặc user đã đăng nhập)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Upload thành công, file được đưa vào queue xử lý
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cvId:
+                    type: string
+                  status:
+                    type: string
+                    example: pending
+                  message:
+                    type: string
+        "400":
+          description: File lỗi hoặc vượt quá 5MB
+  /api/cvs:
+    get:
+      tags: [CVs]
+      summary: Lấy danh sách CV của user hiện tại
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CV"
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+  /api/cvs/search:
+    get:
+      tags: [CVs]
+      summary: Tìm kiếm CV đã nộp vào job của recruiter
+      description: |
+        Endpoint này chỉ dành cho recruiter.
+        Kết quả tìm kiếm được lọc theo các CV thuộc đơn ứng tuyển vào job do recruiter hiện tại tạo.
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Từ khóa full-text. Có thể để trống để liệt kê CV đã nộp.
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CVSearchHit"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  latencyMs:
+                    type: integer
+        "403":
+          description: Không đúng quyền recruiter
+  /api/cvs/{id}:
+    get:
+      tags: [CVs]
+      summary: Lấy chi tiết CV của chính user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cv:
+                    $ref: "#/components/schemas/CV"
+        "404":
+          description: Không tìm thấy CV
+  /api/cvs/{id}/download:
+    get:
+      tags: [CVs]
+      summary: Tải CV của chính user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Không tìm thấy CV
+  /api/cvs/{id}/recruiter-download:
+    get:
+      tags: [CVs]
+      summary: Recruiter tải CV ứng viên đã apply vào job của mình
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Không tìm thấy CV hoặc recruiter không có quyền
+  /api/applications:
+    post:
+      tags: [Applications]
+      summary: Candidate ứng tuyển công việc
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplyJobRequest"
+      responses:
+        "201":
+          description: Ứng tuyển thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  application:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      jobId:
+                        type: string
+                      cvId:
+                        type: string
+                      status:
+                        type: string
+        "400":
+          description: Thiếu dữ liệu hoặc đã apply rồi
+        "403":
+          description: CV không thuộc user hiện tại
+    get:
+      tags: [Applications]
+      summary: Lấy danh sách đơn ứng tuyển
+      description: |
+        - Candidate: trả về danh sách job đã ứng tuyển.
+        - Recruiter: trả về danh sách ứng viên apply vào job do mình tạo.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+  /api/applications/{id}/status:
+    patch:
+      tags: [Applications]
+      summary: Recruiter cập nhật trạng thái ứng tuyển
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateApplicationStatusRequest"
+      responses:
+        "200":
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  applicationId:
+                    type: string
+                  newStatus:
+                    type: string
+        "400":
+          description: Trạng thái không hợp lệ
+        "403":
+          description: Không đúng quyền
+        "404":
+          description: Không tìm thấy application
+  /api/applications/{id}/cv-download:
+    get:
+      tags: [Applications]
+      summary: Recruiter tải CV theo application ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Không tìm thấy application hoặc không có quyền
+  /api/bookmarks:
+    get:
+      tags: [Bookmarks]
+      summary: Candidate lấy danh sách job đã lưu
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Bookmark"
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+    post:
+      tags: [Bookmarks]
+      summary: Candidate lưu job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveBookmarkRequest"
+      responses:
+        "201":
+          description: Lưu thành công
+        "400":
+          description: Thiếu dữ liệu hoặc lưu trùng
+        "404":
+          description: Không tìm thấy job
+  /api/bookmarks/{jobId}:
+    delete:
+      tags: [Bookmarks]
+      summary: Candidate bỏ lưu job
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Bỏ lưu thành công
+        "404":
+          description: Không tìm thấy bookmark
+  /api/categories:
+    get:
+      tags: [Taxonomies]
+      summary: Lấy danh sách category việc làm
+      security: []
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+  /api/experience-levels:
+    get:
+      tags: [Taxonomies]
+      summary: Lấy danh sách cấp bậc kinh nghiệm
+      security: []
+      responses:
+        "200":
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExperienceLevel"
+security:
+  - bearerAuth: []

@@ -1,0 +1,134 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Briefcase, Loader2 } from 'lucide-react'
+import ApplicationCard from '@/components/Application/ApplicationCard'
+import EmptyState from '@/components/Common/EmptyState'
+import { applicationService } from '@/services/applicationService'
+import type { Application } from '@/types'
+
+
+const LIMIT = 10
+
+
+function ApplicationsPage() {
+  const [applications, setApplications] = useState<Application[]>([])
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchApplications = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const response = await applicationService.getApplications(page, LIMIT)
+
+        if (isMounted) {
+          setApplications(response.data ?? [])
+          const total = response.total
+          if (typeof total === 'number' && total >= 0) {
+            setTotalPages(Math.max(1, Math.ceil(total / LIMIT)))
+          } else {
+            const hasMore = (response.data?.length ?? 0) >= LIMIT
+            setTotalPages(hasMore ? page + 1 : page)
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setError('Failed to load applications')
+          setApplications([])
+          setTotalPages(1)
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void fetchApplications()
+
+    return () => {
+      isMounted = false
+    }
+  }, [page])
+
+  return (
+    <section className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">My Applications</p>
+          <h1 className="mt-2 text-3xl font-bold text-ink">Application Tracker</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            Track every role you have applied to and follow application status updates.
+          </p>
+        </div>
+        <Link
+          to="/jobs"
+          className="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700"
+        >
+          Browse Jobs
+        </Link>
+      </div>
+
+      {isLoading ? (
+        <div className="flex min-h-64 items-center justify-center rounded-lg border border-slate-200 bg-white">
+          <Loader2 className="h-7 w-7 animate-spin text-brand-600" />
+        </div>
+      ) : error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      ) : applications.length === 0 ? (
+        <div className="rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
+          <EmptyState
+            title="You haven't applied to any jobs yet"
+            description="Browse open roles and submit your CV when you find the right fit."
+            icon={<Briefcase className="h-6 w-6" />}
+          />
+          <div className="mt-6 text-center">
+            <Link
+              to="/jobs"
+              className="inline-flex rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700"
+            >
+              Browse Jobs
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {applications.map((application) => (
+            <ApplicationCard key={application.id} application={application} />
+          ))}
+        </div>
+      )}
+
+      <div className="mt-8 flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <button
+          type="button"
+          disabled={page <= 1 || isLoading}
+          onClick={() => setPage((value) => Math.max(1, value - 1))}
+          className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <span className="text-sm font-medium text-slate-600">
+          Page {page} of {totalPages}
+        </span>
+        <button
+          type="button"
+          disabled={page >= totalPages || isLoading}
+          onClick={() => setPage((value) => value + 1)}
+          className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
+    </section>
+  )
+}
+
+export default ApplicationsPage
