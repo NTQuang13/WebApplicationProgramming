@@ -1,8 +1,19 @@
-version: "3.8"
-
 services:
+  redis:
+    image: redis:latest
+    container_name: job-portal-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.2
     container_name: job-portal-es
     environment:
       - discovery.type=single-node
@@ -23,4 +34,5 @@ services:
       retries: 10
 
 volumes:
+  redis_data:
   es_data:
